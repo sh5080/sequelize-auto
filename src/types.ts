@@ -1,15 +1,24 @@
-import _ from "lodash";
-import { check as isReserved } from "reserved-words";
-import { Utils } from "sequelize";
-import { ColumnDescription, Dialect } from "sequelize/types";
-import { FKSpec } from "./dialects/dialect-options";
+import _ from 'lodash';
+import { check as isReserved } from 'reserved-words';
+import { Utils } from 'sequelize';
+import { ColumnDescription, Dialect } from 'sequelize/types';
+import { FKSpec } from './dialects/dialect-options';
 
 export interface Table {
   name?: string;
   table_name: string;
   table_schema?: string;
 }
-
+export interface TableResult {
+  table_name?: string;
+  table_schema?: string;
+  TABLE_NAME?: string;
+  TABLE_SCHEMA?: string;
+  tableName?: string;
+  tableSchema?: string;
+  name?: string;
+  schema?: string;
+}
 export interface Field extends ColumnDescription {
   foreignKey: any;
   special: any[];
@@ -42,7 +51,6 @@ export interface IndexSpec {
   tableName: string;
   /** mysql only - 'BTREE' */
   type: string;
-
 }
 
 /** Relationship between two models, based on foreign keys */
@@ -73,17 +81,17 @@ export interface Relation {
 
 export class TableData {
   /** Fields for each table; indexed by schemaName.tableName */
-  tables: { [tableName: string]: { [fieldName: string]: ColumnDescription; }; };
+  tables: { [tableName: string]: { [fieldName: string]: ColumnDescription } };
   /** Foreign keys for each table; indexed by schemaName.tableName */
-  foreignKeys: { [tableName: string]: { [fieldName: string]: FKSpec; }; };
+  foreignKeys: { [tableName: string]: { [fieldName: string]: FKSpec } };
   /** Flag `true` for each table that has any trigger.  This affects how Sequelize performs updates. */
-  hasTriggerTables: { [tableName: string]: boolean; };
+  hasTriggerTables: { [tableName: string]: boolean };
   /** Indexes for each table; indexed by schemaName.tableName */
-  indexes: { [tableName: string]: IndexSpec[]; };
+  indexes: { [tableName: string]: IndexSpec[] };
   /** Relations between models, computed from foreign keys */
   relations: Relation[];
   /** Text to be written to the model files, indexed by schemaName.tableName */
-  text?: { [name: string]: string; };
+  text?: { [name: string]: string };
   constructor() {
     this.tables = {};
     this.foreignKeys = {};
@@ -95,8 +103,8 @@ export class TableData {
 
 /** Split schema.table into [schema, table] */
 export function qNameSplit(qname: string) {
-  if (qname.indexOf(".") > 0) {
-    const [schemaName, tableNameOrig] = qname.split(".");
+  if (qname.indexOf('.') > 0) {
+    const [schemaName, tableNameOrig] = qname.split('.');
     return [schemaName, tableNameOrig];
   }
   return [null, qname];
@@ -104,18 +112,18 @@ export function qNameSplit(qname: string) {
 
 /** Get combined schema.table name */
 export function qNameJoin(schema: string | undefined, table: string | undefined) {
-  return !!schema ? schema + "." + table : table as string;
+  return !!schema ? schema + '.' + table : (table as string);
 }
 
 /** Language of output model files */
-export declare type LangOption = "es5" | "es6" | "esm" | "ts";
+export declare type LangOption = 'es5' | 'es6' | 'esm' | 'ts';
 
 /** "c" camelCase |
  * "l" lower_case |
  * "o" original (db) |
  * "p" PascalCase |
  * "u" UPPER_CASE */
-export declare type CaseOption = "c" | "l" | "o" | "p" | "u";
+export declare type CaseOption = 'c' | 'l' | 'o' | 'p' | 'u';
 
 /**
  * "c" camelCase |
@@ -125,7 +133,7 @@ export declare type CaseOption = "c" | "l" | "o" | "p" | "u";
  * "p" PascalCase |
  * "u" UPPER_CASE
  */
-export declare type CaseFileOption = "k" | CaseOption;
+export declare type CaseFileOption = 'k' | CaseOption;
 
 export interface AutoOptions {
   additional?: any;
@@ -142,7 +150,7 @@ export interface AutoOptions {
   /** Database dialect */
   dialect?: Dialect;
   /** Dialect-specific options */
-  dialectOptions?: { options?: any; };
+  dialectOptions?: { options?: any };
   /** Where to write the model files */
   directory: string;
   /** Database host */
@@ -187,7 +195,7 @@ export interface AutoOptions {
   useDefine: boolean;
 }
 
-export type TSField = { special: string[]; elementType: string; } & ColumnDescription;
+export type TSField = { special: string[]; elementType: string } & ColumnDescription;
 
 /** Uses Inflector via Sequelize, but appends 's' if plural would be the same as singular.
  * Use `Utils.useInflection({ singularize: fn, pluralize: fn2 })` to configure. */
@@ -230,11 +238,16 @@ export function recase(opt: CaseOption | CaseFileOption | undefined, val: string
   return val;
 }
 
-const tsNames = ["DataTypes", "Model", "Optional", "Sequelize"];
-export function makeTableName(opt: CaseOption | undefined, tableNameOrig: string | null, singular = false, lang = "es5") {
+const tsNames = ['DataTypes', 'Model', 'Optional', 'Sequelize'];
+export function makeTableName(
+  opt: CaseOption | undefined,
+  tableNameOrig: string | null,
+  singular = false,
+  lang = 'es5'
+) {
   let name = recase(opt, tableNameOrig, singular);
-  if (isReserved(name) || (lang == "ts" && tsNames.includes(name))) {
-    name += "_";
+  if (isReserved(name) || (lang == 'ts' && tsNames.includes(name))) {
+    name += '_';
   }
   return name;
 }
@@ -243,7 +256,7 @@ export function makeTableName(opt: CaseOption | undefined, tableNameOrig: string
 export function makeIndent(spaces: boolean | undefined, indent: number | undefined): string[] {
   let sp = '';
   for (let x = 0; x < (indent || 2); ++x) {
-    sp += (spaces === true ? ' ' : "\t");
+    sp += spaces === true ? ' ' : '\t';
   }
   let space = [];
   for (let i = 0; i < 6; i++) {

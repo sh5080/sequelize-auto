@@ -1,7 +1,8 @@
-
 var path = require('path');
+const oracledb = require('oracledb');
 
-require('dotenv').config()
+require('dotenv').config();
+oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_DIR });
 
 module.exports = {
   directory: path.join(__dirname, 'models'),
@@ -9,10 +10,10 @@ module.exports = {
   password: process.env.MYSQL_PASS,
   database: process.env.MYSQL_NAME,
   host: process.env.MYSQL_HOST,
-  pool: { maxConnections: 5, maxIdleTime: 30000},
+  pool: { maxConnections: 5, maxIdleTime: 30000 },
 
-  rand: function() {
-    return parseInt(Math.random() * 999, 10)
+  rand: function () {
+    return parseInt(Math.random() * 999, 10);
   },
 
   //make maxIdleTime small so that tests exit promptly
@@ -22,15 +23,15 @@ module.exports = {
     database: process.env.MYSQL_NAME,
     host: process.env.MYSQL_HOST,
     port: process.env.MYSQL_PORT,
-    pool: { maxConnections: 5, maxIdleTime: 30}
+    pool: { maxConnections: 5, maxIdleTime: 30 },
   },
 
   sqlite: {
     username: process.env.SQLITE_USER,
     password: process.env.SQLITE_PASS,
     host: process.env.SQLITE_HOST,
-    database: path.join(__dirname, "database.sqlite"),
-    storage: path.join(__dirname, "database.sqlite")
+    database: path.join(__dirname, 'database.sqlite'),
+    storage: path.join(__dirname, 'database.sqlite'),
   },
 
   postgres: {
@@ -39,7 +40,7 @@ module.exports = {
     password: process.env.POSTGRES_PASS,
     host: process.env.POSTGRES_HOST,
     port: process.env.POSTGRES_PORT,
-    pool: { maxConnections: 5, maxIdleTime: 30}
+    pool: { maxConnections: 5, maxIdleTime: 30 },
   },
 
   mssql: {
@@ -47,6 +48,18 @@ module.exports = {
     username: process.env.MSSQL_USER,
     password: process.env.MSSQL_PASS,
     host: process.env.MSSQL_HOST,
-    port: process.env.MSSQL_PORT
-  }
-}
+    port: process.env.MSSQL_PORT,
+  },
+
+  oracle: {
+    database: process.env.ORACLE_NAME,
+    username: process.env.ORACLE_USER,
+    password: process.env.ORACLE_PASS,
+    host: process.env.ORACLE_HOST,
+    port: process.env.ORACLE_PORT,
+    dialect: 'oracle',
+    dialectOptions: {
+      oracleClient: { _oracledb: oracledb },
+    },
+  },
+};
