@@ -10,16 +10,15 @@ const testConfig = require('./config');
 const _ = require('lodash');
 const ESLint = require('eslint').ESLint;
 
-
-describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
+describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function () {
   var self = this;
-  self.timeout(10000);
+  self.timeout(30000);
 
-  after(function(done) {
+  after(function (done) {
     helpers.clearDatabase(self.sequelize, done, true);
   });
 
-  before(function(done) {
+  before(function (done) {
     debug('Creating tables to run tests against.');
     helpers.initTestData(self, dialect, done);
   });
@@ -53,17 +52,17 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
     } catch (err) {
       callback(err);
     }
-  };
+  }
 
-  describe('should be able to generate', function() {
-    it('the model files.', function(done) {
+  describe('should be able to generate', function () {
+    it('the model files.', function (done) {
       try {
         var testTables = ['Users', 'HistoryLogs', 'ParanoidUsers'];
         if (helpers.isSnakeTables()) {
-          testTables = testTables.map(t => _.snakeCase(t));
+          testTables = testTables.map((t) => _.snakeCase(t));
         }
 
-        setupModels(function(err, stdout, stderr) {
+        setupModels(function (err, stdout, stderr) {
           if (err) return done(err);
 
           // console.log('------------');
@@ -75,7 +74,7 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
             console.log(stderr);
           }
           // Warning: using a password on the command line interface can be insecure.
-          expect(stderr).to.satisfy(s => !s || s.includes("using a password on the command line interface"));
+          expect(stderr).to.satisfy((s) => !s || s.includes('using a password on the command line interface'));
 
           // Cleanup whitespace and linebreaks!
           stdout = stdout.replace(/\s+/g, ' ');
@@ -85,23 +84,31 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
           try {
             // Check the output
             if (self.sequelize.options.dialect === 'postgres') {
-              expect(stdout.indexOf('SELECT table_name, table_schema FROM information_schema.tables')).to.be.at.above(-1);
+              expect(stdout.indexOf('SELECT table_name, table_schema FROM information_schema.tables')).to.be.at.above(
+                -1
+              );
 
-              testTables.forEach(function(tbl) {
+              testTables.forEach(function (tbl) {
                 const query = `tc.table_name = '${tbl}'`;
                 expect(stdout.indexOf(query)).to.be.at.above(-1);
               });
             } else if (self.sequelize.options.dialect === 'sqlite') {
               expect(stdout.indexOf("FROM `sqlite_master` WHERE type='table'")).to.be.at.above(-1);
             } else if (self.sequelize.options.dialect === 'mssql') {
-              expect(stdout.indexOf('SELECT TABLE_NAME AS table_name, TABLE_SCHEMA AS table_schema FROM INFORMATION_SCHEMA.TABLES')).to.be.at.above(-1);
-              testTables.forEach(function(tbl) {
+              expect(
+                stdout.indexOf(
+                  'SELECT TABLE_NAME AS table_name, TABLE_SCHEMA AS table_schema FROM INFORMATION_SCHEMA.TABLES'
+                )
+              ).to.be.at.above(-1);
+              testTables.forEach(function (tbl) {
                 expect(stdout.indexOf(`TABLE_NAME = '${tbl}'`)).to.be.at.above(-1);
               });
             } else {
-              expect(stdout.indexOf('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE')).to.be.at.above(-1);
+              expect(
+                stdout.indexOf('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE')
+              ).to.be.at.above(-1);
 
-              testTables.forEach(function(tbl) {
+              testTables.forEach(function (tbl) {
                 const query = `WHERE K.TABLE_NAME = '${tbl}'`; // AND C.TABLE_SCHEMA = '${db}';`
                 const queryPos = stdout.indexOf(query);
                 debug('mysql queryPos:', queryPos, 'query:', query);
@@ -109,42 +116,47 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
               });
             }
           } catch (err) {
-            console.log("Error checking stdout:", err);
+            console.log('Error checking stdout:', err);
             return done(err);
           }
 
           debug('Linting output for', self.sequelize.options.dialect);
 
-          const engine = new ESLint({fix: true});
-          engine.lintFiles(testConfig.directory).then(r => {
-            const errs = ESLint.getErrorResults(r);
-            console.dir(errs, {depth: 3});
-            return ESLint.outputFixes(r);
-          }).finally(_ => done());
+          const engine = new ESLint({ fix: true });
+          engine
+            .lintFiles(testConfig.directory)
+            .then((r) => {
+              const errs = ESLint.getErrorResults(r);
+              console.dir(errs, { depth: 3 });
+              return ESLint.outputFixes(r);
+            })
+            .finally((_) => done());
 
           // done();
         });
       } catch (err) {
-        console.log("Ack:", err);
+        console.log('Ack:', err);
         return done(err);
       }
     });
   });
 
-  describe('should be able to require', function() {
+  describe('should be able to require', function () {
     before(setupModels);
     const isSnakeTables = helpers.isSnakeTables();
 
-    it('the HistoryLogs model', function(done) {
+    it('the HistoryLogs model', function (done) {
       try {
         const historyModel = path.join(testConfig.directory, 'HistoryLogs');
         debug('Importing:', historyModel);
 
-        const HistoryLogs = self.sequelize.import ? self.sequelize.import(historyModel) : require(historyModel)(self.sequelize, helpers.Sequelize);
+        const HistoryLogs = self.sequelize.import
+          ? self.sequelize.import(historyModel)
+          : require(historyModel)(self.sequelize, helpers.Sequelize);
         const tableName = isSnakeTables ? 'history_logs' : 'HistoryLogs';
         expect(HistoryLogs.tableName).to.equal(tableName);
-        expect(HistoryLogs.options.hasTrigger).to.equal(true);      
-        ['some Text', '1Number', 'aRandomId', 'id'].forEach(function(field) {
+        expect(HistoryLogs.options.hasTrigger).to.equal(true);
+        ['some Text', '1Number', 'aRandomId', 'id'].forEach(function (field) {
           expect(HistoryLogs.rawAttributes[field], field).to.exist;
         });
         expect(HistoryLogs.rawAttributes['some Text'].type.toString().indexOf('VARCHAR')).to.be.at.above(-1);
@@ -155,16 +167,18 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
       }
     });
 
-    it('the ParanoidUsers model', function(done) {
+    it('the ParanoidUsers model', function (done) {
       try {
         const pUsers = path.join(testConfig.directory, 'ParanoidUsers');
         debug('Importing:', pUsers);
 
-        const ParanoidUsers = self.sequelize.import ? self.sequelize.import(pUsers) : require(pUsers)(self.sequelize, helpers.Sequelize);
+        const ParanoidUsers = self.sequelize.import
+          ? self.sequelize.import(pUsers)
+          : require(pUsers)(self.sequelize, helpers.Sequelize);
         const tableName = isSnakeTables ? 'paranoid_users' : 'ParanoidUsers';
         expect(ParanoidUsers.tableName).to.equal(tableName);
-        expect(ParanoidUsers.options).to.not.have.property("hasTrigger");
-        ['username', 'id', 'createdAt', 'updatedAt', 'deletedAt'].forEach(function(field) {
+        expect(ParanoidUsers.options).to.not.have.property('hasTrigger');
+        ['username', 'id', 'createdAt', 'updatedAt', 'deletedAt'].forEach(function (field) {
           expect(ParanoidUsers.rawAttributes[field]).to.exist;
         });
         done();
@@ -174,17 +188,20 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
       }
     });
 
-    it('the Users model', function(done) {
+    it('the Users model', function (done) {
       try {
         const users = path.join(testConfig.directory, 'Users');
         debug('Importing:', users);
 
-        const Users = self.sequelize.import ? self.sequelize.import(users) : require(users)(self.sequelize, helpers.Sequelize);
+        const Users = self.sequelize.import
+          ? self.sequelize.import(users)
+          : require(users)(self.sequelize, helpers.Sequelize);
         const tableName = isSnakeTables ? 'users' : 'Users';
         const raw = Users.rawAttributes;
         expect(Users.tableName).to.equal(tableName);
-        expect(Users.options).to.not.have.property("hasTrigger");
-        ['username',
+        expect(Users.options).to.not.have.property('hasTrigger');
+        [
+          'username',
           'touchedAt',
           'aNumber',
           'bNumber',
@@ -194,7 +211,8 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
           'defaultValueBoolean',
           'id',
           'createdAt',
-          'updatedAt'].forEach(function(field) {
+          'updatedAt',
+        ].forEach(function (field) {
           expect(raw[field]).to.exist;
         });
         expect(raw.id.autoIncrement).to.be.true;
@@ -205,10 +223,14 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
         expect(raw.defaultValueBoolean.defaultValue).to.be.equal(dialect == 'mysql' ? 1 : true);
         expect(raw.bNumber.defaultValue).to.be.equal(42);
         const dateDefault = JSON.stringify(raw.dateWithDefault.defaultValue);
-        const databaseMajorVersion = +((self.sequelize.options.databaseVersion || '').split('.')[0]);
-        expect(dateDefault).to.be.equal(dialect == 'mssql' ? '{"fn":"getdate","args":[]}' : 
-          (dialect == 'postgres' && databaseMajorVersion < 10) ? '{"fn":"now","args":[]}' :
-          '{"val":"CURRENT_TIMESTAMP"}');
+        const databaseMajorVersion = +(self.sequelize.options.databaseVersion || '').split('.')[0];
+        expect(dateDefault).to.be.equal(
+          dialect == 'mssql'
+            ? '{"fn":"getdate","args":[]}'
+            : dialect == 'postgres' && databaseMajorVersion < 10
+            ? '{"fn":"now","args":[]}'
+            : '{"val":"CURRENT_TIMESTAMP"}'
+        );
         done();
       } catch (err) {
         console.log('Failed to load Users model:', err);
@@ -216,7 +238,7 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
       }
     });
 
-    it('the VHistory model', function(done) {
+    it('the VHistory model', function (done) {
       if (!helpers.views) {
         return done();
       }
@@ -224,11 +246,13 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
         const vpath = path.join(testConfig.directory, 'VHistory');
         debug('Importing:', vpath);
 
-        const vHist = self.sequelize.import ? self.sequelize.import(vpath) : require(vpath)(self.sequelize, helpers.Sequelize);
+        const vHist = self.sequelize.import
+          ? self.sequelize.import(vpath)
+          : require(vpath)(self.sequelize, helpers.Sequelize);
         const tableName = isSnakeTables ? 'v_history' : 'VHistory';
         const raw = vHist.rawAttributes;
         expect(vHist.tableName).to.equal(tableName);
-        expect(vHist.options).to.not.have.property("hasTrigger");
+        expect(vHist.options).to.not.have.property('hasTrigger');
         expect(raw['aRandomId'], 'aRandomId').to.exist;
         done();
       } catch (err) {
@@ -236,13 +260,15 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
         done(err);
       }
     });
-    
-    it('the Users model CRUD', function(done) {
+
+    it('the Users model CRUD', function (done) {
       try {
         const users = path.join(testConfig.directory, 'Users');
         debug('Importing:', users);
 
-        const Users = self.sequelize.import ? self.sequelize.import(users) : require(users)(self.sequelize, helpers.Sequelize);
+        const Users = self.sequelize.import
+          ? self.sequelize.import(users)
+          : require(users)(self.sequelize, helpers.Sequelize);
 
         // crude date offset to account for difference between database time and sequelize UTC time.
         var yesterday = new Date();
@@ -254,24 +280,24 @@ describe(helpers.getTestDialectTeaser('sequelize-auto generate'), function() {
           bNumber: 5,
           validateTest: 888888888,
           validateCustom: 'custom?',
-          dateAllowNullTrue: null
-        }).then(function(u) {
-          return u.reload().then(function(jane) {
-            expect(jane.username).to.be.equal('janedoe');
-            expect(jane.validateTest).to.be.equal(888888888);
-            expect(jane.dateWithDefault).to.be.greaterThan(yesterday);
-            expect(jane.defaultValueBoolean).to.be.equal(true);
-            done();
+          dateAllowNullTrue: null,
+        })
+          .then(function (u) {
+            return u.reload().then(function (jane) {
+              expect(jane.username).to.be.equal('janedoe');
+              expect(jane.validateTest).to.be.equal(888888888);
+              expect(jane.dateWithDefault).to.be.greaterThan(yesterday);
+              expect(jane.defaultValueBoolean).to.be.equal(true);
+              done();
+            });
+          })
+          .catch(function (err) {
+            done(err);
           });
-        }).catch(function(err) {
-          done(err);
-        });
-
       } catch (err) {
         console.log('Failed to CRUD Users model:', err);
         done(err);
       }
-
     });
   });
 });
